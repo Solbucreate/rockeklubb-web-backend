@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: larvik-rockeklubb-backend
+    env: node
+    repo: https://github.com/Solbucreate/rockeklubb-web-backend.git
+    branch: main
+
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+
+    envVars:
+      # Node environment
+      - key: NODE_ENV
+        value: production
+
+      # Database (Render kobler dem automatisk hvis du velger databasen i dashboard)
+      - key: DB_HOST
+        fromDatabase:
+          name: larvik-rockeklubb-db
+          type: HOST
+      - key: DB_NAME
+        fromDatabase:
+          name: larvik-rockeklubb-db
+          type: NAME
+      - key: DB_USER
+        fromDatabase:
+          name: larvik-rockeklubb-db
+          type: USER
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: larvik-rockeklubb-db
+          type: PASSWORD
+      - key: DB_PORT
+        value: "5432"
+
+      # Backend base URL (du kan overstyre dette senere)
+      - key: BASE_URL
+        value: https://<din-backend-url>.onrender.com
+
+      # JWT secret — fyll inn i Render dashboard
+      - key: JWT_SECRET
+        sync: false
+
+      # Stripe keys
+      - key: STRIPE_SECRET
+        sync: false
+      - key: STRIPE_PUBLIC
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # Vipps keys
+      - key: VIPPS_CLIENT_ID
+        sync: false
+      - key: VIPPS_CLIENT_SECRET
+        sync: false
+      - key: VIPPS_SUBSCRIPTION_KEY
+        sync: false
+      - key: VIPPS_MERCHANT_SERIAL_NUMBER
+        sync: false
+
+      # Email / SMTP
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
