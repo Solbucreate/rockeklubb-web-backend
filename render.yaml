@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: larvik-rockeklubb-backend
+    env: node
+    repo: https://github.com/Solbucreate/rockeklubb-web-backend.git
+    branch: main
+
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Database connection (manual env vars)
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false
+
+      # VIPPS
+      - key: VIPPS_CLIENT_ID
+        sync: false
+      - key: VIPPS_CLIENT_SECRET
+        sync: false
+      - key: VIPPS_SUBSCRIPTION_KEY
+        sync: false
+      - key: VIPPS_MERCHANT_SERIAL_NUMBER
+        sync: false
+
+      # Email / SMTP
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
