@@ -1,60 +1,73 @@
 import { Request, Response } from "express";
-import Ticket from "../models/ticket";
-import Order from "../models/order";
 import Event from "../models/event";
+import Order from "../models/order";
+import Ticket from "../models/ticket";
+
 import { generateQR } from "../utils/qrGenerator";
-import { generatePDF } from "../utils/pdfGenerator";
+import { generateTicketPDF } from "../utils/pdfGenerator";
 import { sendEmail } from "../utils/emailer";
 
-export const generateTickets = async (req: Request, res: Response) => {
+export const createTicket = async (req: Request, res: Response) => {
   try {
-    const { orderId, eventId, quantity } = req.body;
+    const { eventId, email } = req.body;
 
-    // 1. Hent ordre
-    const order = await Order.findByPk(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    // 2. Hent event
+    // 1. Hent event
     const event = await Event.findByPk(eventId);
-    if (!event) return res.status(404).json({ error: "Event not found" });
-
-    const tickets = [];
-
-    // 3. Lag billetter
-    for (let i = 0; i < quantity; i++) {
-      const code = `${orderId}-${i + 1}-${Date.now()}`;
-      const qr = await generateQR(code);
-
-      const ticket = await Ticket.create({
-        orderId,
-        eventId,
-        qrCode: code,
-      });
-
-      const pdf = await generatePDF({
-        event,
-        order,
-        qrCode: code,
-      });
-
-      tickets.push({ ticket, pdf });
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
     }
 
-    // 4. Send e-post
-    await sendEmail({
-      to: order.email,
-      subject: "Dine billetter",
-      text: "Her er dine billetter!",
-      attachments: tickets.map(t => ({
-        filename: `billett-${t.ticket.id}.pdf`,
-        content: t.pdf,
-      })),
+    // 2. Opprett ordre
+    const order = await Order.create({
+      eventId,
+      email,
+      totalAmount: event.price,
     });
 
-    return res.json({ message: "Tickets generated and sent", count: quantity });
+    // 3. Opprett billett
+    const ticket = await Ticket.create({
+      eventId,
+      orderId: order.id,
+      email,
+    });
 
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Failed to generate tickets" });
+    // 4. Generer QR-kode
+    const qrBuffer = await generateQR(`ticket-${ticket.id}`);
+
+    // 5. Lag PDF (returnerer filsti)
+    const pdfPath = await generateTicketPDF({
+      eventTitle: event.title,
+      eventDate: event.date.toString(),
+      eventTime: "",
+      venue: "Larvik Rockeklubb",
+      qrCode: qrBuffer,
+      ticketId: ticket.id,
+      orderId: order.id,
+      email,
+    });
+
+    // 6. Send e-post med PDF
+    await sendEmail({
+      to: email,
+      subject: "Din billett til Larvik Rockeklubb",
+      html: `<p>Takk for din bestilling! Billetten ligger vedlagt.</p>`,
+      attachments: [
+        {
+          filename: `ticket-${order.id}-${ticket.id}.pdf`,
+          path: pdfPath,
+        },
+      ],
+    });
+
+    res.json({
+      success: true,
+      message: "Ticket created and email sent",
+      ticketId: ticket.id,
+      orderId: order.id,
+    });
+
+  } catch (error) {
+    console.error("Ticket creation error:", error);
+    res.status(500).json({ error: "Ticket creation failed" });
   }
 };
